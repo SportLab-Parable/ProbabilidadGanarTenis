@@ -10,6 +10,12 @@ import random  # Para generar números aleatorios.
 
 import matplotlib.pyplot as plt  # Para dibujar los gráficos.
 
+# Resultados posibles de un partido (sets de A - sets de B)
+MARCADORES = {
+    'tenis': ['3-0', '3-1', '3-2', '2-3', '1-3', '0-3'],
+    'badminton': ['2-0', '2-1', '1-2', '0-2'],
+    'pingpong': ['3-0', '3-1', '3-2', '2-3', '1-3', '0-3']
+}
 
 # ----------------------------------------------------------------------
 # TENIS
@@ -133,23 +139,43 @@ def jugar_partido(deporte, p, p_presion) -> bool:
         else:
             sets_b += 1
 
-    return sets_a == sets_para_ganar
+    return sets_a, sets_b
 
-def porcentaje_victorias(deporte, p, p_presion=None, n_partidos=10000) -> float:
-    """Se simulan n_partidos y devuelve la fracción que gana A (entre 0 y 1)."""
+def simular(deporte, p, p_presion=None, n_partidos=10000):
+    """Se simulan n_partidos y devuelve la fracción que gana A (entre 0 y 1).
+    'prob_ganar_partido': fracción de partidos que gana A (entre 0 y 1)
+    'marcadores':         fracción de partidos que acaban en cada marcador
+                              (por ejemplo {"3-0": 0.21, "3-1": 0.25, ...})"""
     if p_presion is None:
         p_presion = p # Sin presión: todos los puntos son igual de importantes.
 
     victorias = 0
+    veces_resultado = {marcador: 0 for marcador in MARCADORES[deporte]}
+
     for _ in range(n_partidos):
-        if jugar_partido(deporte, p, p_presion):
+        sets_a, sets_b = jugar_partido(deporte, p, p_presion)
+        veces_resultado[f'{sets_a}-{sets_b}'] += 1
+        if sets_a > sets_b:
             victorias += 1
-    return victorias / n_partidos
+ 
+    marcadores = {}
+    for marcador, cantidad in veces_resultado.items():
+        marcadores[marcador] = cantidad / n_partidos
+ 
+    return {'prob_ganar_partido': victorias / n_partidos, 'marcadores': marcadores}
 
 # ----------------------------------------------------------------------
 # PROGRAMA PRINCIPAL: tabla y gráfica
 if __name__ == "__main__":
     random.seed(42)    # Semilla: así los resultados se pueden repetir.
+
+    # Ejemplo: marcadores finales de cada deporte cuando p = 0.52
+    for deporte in ['tenis', 'badminton', 'pingpong']:
+        resultado = simular(deporte, 0.52)
+        print(f"\n{deporte} con p = 0.52  (gana el partido: {resultado['prob_ganar_partido']:.3f})")
+        for marcador, fraccion in resultado['marcadores'].items():
+            print(f'    {marcador}: {fraccion * 100:.1f} %')
+    print()
 
     # Valores de p: 0.40, 0.41, ... , 0.60
     valores_p = [0.40 + 0.01 * i for i in range(21)]
@@ -159,7 +185,7 @@ if __name__ == "__main__":
     for deporte in ['tenis', 'badminton', 'pingpong']:
         resultados = []
         for p in valores_p:
-            resultados.append(porcentaje_victorias(deporte, p))
+            resultados.append(simular(deporte, p)["prob_ganar_partido"])
             print(f'{deporte:9s} p={p:.2f}  victorias={resultados[-1]:.3f}')
         plt.plot(valores_p, resultados, marker='o', label=deporte)
 
