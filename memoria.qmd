@@ -1,0 +1,235 @@
+---
+title: "Evaluación de la probabilidad de ganar en el tenis, bádminton y ping-pong"
+lang: es
+format:
+  html:
+    embed-resources: true
+    toc: true
+    toc-title: "Índice"
+    number-sections: true
+execute:
+  echo: false
+---
+
+# Resumen del trabajo
+
+**La pregunta.** Roger Federer ganó el 80 % de sus 1526 partidos,
+pero solo el 54 % de los puntos que jugó. ¿Cómo pudo ganar tantos partidos con ese porcentaje de puntos?
+
+**Método.** Se simulan miles de partidos punto a punto usando números aleatorios entre 0 y 1:
+el jugador A gana cada punto con probabilidad 'p' y el jugador B con '1 - p'.
+El porcentaje de partidos que gana A es la estimación de su probabilidad de
+ganar el partido. Se repite para valores de 'p' entre 0.40 y 0.60.
+
+**Reglas modeladas.**
+
+- **Tenis:** partido al mejor de 5 sets. Un juego se gana a 4 puntos con 2 de
+  diferencia, un set a 6 juegos con 2 de diferencia, y si se llega a 6-6 se juega
+  un tie-break a 7 puntos (con 2 de diferencia).
+- **Bádminton:** partido al mejor de 3 sets. Cada set se juega a 21 puntos con
+  2 de diferencia, y quien llega a 30 puntos gana el set.
+- **Ping-pong:** partido al mejor de 5 sets. Cada set se juega a 11 puntos con
+  2 de diferencia, sin tope de puntos.
+
+**Resultado principal: una ventaja pequeña se amplifica mucho.** En el tenis, el
+modelo da aproximadamente estos resultados:
+
+| Puntos ganados (`p`) | 0.50 | 0.51 | 0.52 | 0.53 | 0.54 | 0.55 | 0.56 |
+|---|---|---|---|---|---|---|---|
+| Partidos ganados | 50 % | 64 % | 75 % | 85 % | 91 % | 95 % | 98 % |
+
+Pasar de ganar el 50 % de los puntos a ganar el 55 % hace que la probabilidad de
+ganar el partido suba del 50 % al 95 %. La razón es que un partido de tenis son
+cientos de puntos, y la pequeña ventaja de cada uno se acumula juego a juego y set
+a set.
+
+**Un matiz sobre Federer.** Con 'p = 0.54' constante, el modelo da en torno al
+91 % de partidos ganados, más que el 80 % real (con ese porcentaje de victorias
+el modelo correspondería a 'p ≈ 0.525'). La diferencia es esperable, porque el
+modelo es una simplificación: supone que 'p' es la misma contra cualquier rival y
+que los puntos son independientes entre sí. En la realidad el 54 % es un promedio
+de muchos rivales, y los puntos no pesan lo mismo en todo momento. 
+Aun así, el modelo explica la idea
+general: ganar un poco más de la mitad de los puntos basta para ganar la gran
+mayoría de los partidos.
+
+**Relación con las transiciones de fase.** Aquí 'p' actúa como el *parámetro de
+control* y la probabilidad de ganar el partido como el *parámetro de orden*. El
+valor crítico está en 'p = 0.50': la curva es continua,
+pero cambia muy rápido en una franja estrecha alrededor de ese valor.
+En bádminton y ping-pong la curva es menos pronunciada,
+porque se juegan menos puntos y la ventaja tiene menos tiempo para acumularse
+(se puede comprobar en la simulación).
+
+**Bola extra: puntos normales y puntos decisivos.** Un jugador puede ganar un
+partido habiendo perdido más puntos que su rival, porque no todos los puntos valen lo
+mismo. Para simularlo como proceso estadístico, el modelo distingue dos
+probabilidades: 'p1' para los puntos normales y 'p2' para los decisivos (deuce,
+ventaja y todos los puntos del tie-break). En la simulación, 'p1' es el slider de
+'p' y 'p2 = p1 + ventaja en puntos de presión'. Por ejemplo, con 'p = 0.50' y una
+ventaja positiva en los puntos decisivos, el jugador A gana más del 50 % de los
+partidos aunque en los puntos normales esté igualado.
+
+**Resultados que se obtienen.**
+
+- La probabilidad de ganar el partido en función de 'p' (gráfica de victorias
+  frente a 'p'), para cada deporte.
+- La probabilidad de cada marcador final en sets (3-0, 3-1, 3-2, 2-3, etc.).
+
+**Cómo está hecho.** Python simula los partidos una sola vez al generar el
+documento y guarda los resultados dentro del HTML. El navegador solo los muestra,
+por lo que el archivo se puede abrir sin instalar nada.
+
+# Simulación
+
+Elige un deporte y la probabilidad 'p' de que el jugador A gane cada punto.
+La gráfica muestra la probabilidad de ganar el **partido** para todos los
+valores de 'p' entre 0.40 y 0.60, y el punto rojo marca el valor que has elegido.
+Debajo se muestra la probabilidad de cada marcador final.
+
+```{python}
+# Python simula los partidos solo una vez, al generar el documento.
+# Los resultados se guardan dentro del HTML para que el navegador los use.
+import json
+import random
+
+from IPython.display import HTML, display
+
+from simulador_partidos import simular
+
+N_PARTIDOS = 5000    # Partidos simulados por cada combinación.
+
+valores_p = [round(0.40 + 0.01 * i, 2) for i in range(21)]        # 0.40, 0.41, ... 0.60
+valores_delta = [round(-0.05 + 0.01 * i, 2) for i in range(11)]   # -0.05, ..., 0.05
+
+random.seed(42)
+filas = []
+
+for deporte in ['tenis', 'badminton', 'pingpong']:
+    # La ventaja de presión solo existe en tenis; en los demás deportes es 0
+    deltas = valores_delta if deporte == 'tenis' else [0.0]
+    for delta in deltas:
+        for p in valores_p:
+            resultado = simular(deporte, p, p + delta, N_PARTIDOS)
+            filas.append({
+                'deporte': deporte,
+                'delta': delta,
+                'p': p,
+                'victorias': resultado['prob_ganar_partido'],
+                'marcadores': resultado['marcadores'],   # Ej.: {'3-0': 0.25, '3-1': 0.28, ...}
+            })
+
+# Controles y gráficos de la página. 
+# El navegador la dibuja con JavaScript usando los resultados de arriba.
+PLANTILLA = """
+<div id="sim">
+  <p><label>Deporte:
+    <select id="deporte">
+      <option value="tenis">Tenis</option>
+      <option value="badminton">Bádminton</option>
+      <option value="pingpong">Ping-pong</option>
+    </select></label></p>
+  <p><label>Probabilidad de ganar un punto (p):
+    <input type="range" id="p" min="0.40" max="0.60" step="0.01" value="0.52">
+    <b id="p_val"></b></label></p>
+  <p><label>Ventaja en puntos de presión (solo tenis):
+    <input type="range" id="delta" min="-0.05" max="0.05" step="0.01" value="0">
+    <b id="delta_val"></b></label></p>
+  <p id="texto" style="font-size:1.1em"></p>
+  <svg id="grafica" viewBox="0 0 700 420" style="max-width:700px; width:100%; color:inherit"></svg>
+  <h4>Probabilidad de cada marcador final (sets de A - sets de B)</h4>
+  <div id="marcadores"></div>
+</div>
+
+<script>
+(function () {
+  const datos = __DATOS__;                       // Resultados calculados por Python
+  const el = id => document.getElementById(id);
+
+  // Medidas de la gráfica y conversión de valores a posiciones en pantalla
+  const W = 700, H = 420, mL = 60, mR = 20, mT = 20, mB = 50;
+  const X = p => mL + (p - 0.40) / 0.20 * (W - mL - mR);
+  const Y = v => H - mB - v * (H - mT - mB);
+
+  function dibujar() {
+    const deporte = el("deporte").value;
+    const p = parseFloat(el("p").value);
+    const delta = deporte === "tenis" ? parseFloat(el("delta").value) : 0;
+
+    el("p_val").textContent = p.toFixed(2);
+    el("delta_val").textContent = (delta >= 0 ? "+" : "") + delta.toFixed(2);
+    el("delta").disabled = deporte !== "tenis";
+
+    // Nos quedamos con los datos del deporte y la ventaja elegidos
+    const curva = datos.filter(d => d.deporte === deporte && Math.abs(d.delta - delta) < 0.005);
+    const actual = curva.find(d => Math.abs(d.p - p) < 0.005);
+
+    el("texto").innerHTML = "Con <b>p = " + p.toFixed(2) + "</b>, el jugador A gana el <b>" +
+      (actual.victorias * 100).toFixed(1) + " %</b> de los partidos.";
+
+    let s = "";
+
+    // Cuadrícula horizontal y números del eje y
+    for (let v = 0; v <= 1.0001; v += 0.2) {
+      s += '<line x1="' + mL + '" x2="' + (W - mR) + '" y1="' + Y(v) + '" y2="' + Y(v) +
+           '" stroke="#999" stroke-opacity="0.3"/>';
+      s += '<text x="' + (mL - 8) + '" y="' + (Y(v) + 4) +
+           '" text-anchor="end" font-size="12" fill="currentColor">' + v.toFixed(1) + '</text>';
+    }
+    // Números del eje x
+    for (let i = 0; i <= 4; i++) {
+      const x = 0.40 + 0.05 * i;
+      s += '<text x="' + X(x) + '" y="' + (H - mB + 20) +
+           '" text-anchor="middle" font-size="12" fill="currentColor">' + x.toFixed(2) + '</text>';
+    }
+    // Títulos de los ejes
+    s += '<text x="' + (mL + (W - mL - mR) / 2) + '" y="' + (H - 8) +
+         '" text-anchor="middle" font-size="13" fill="currentColor">Probabilidad de ganar un punto (p)</text>';
+    s += '<text transform="rotate(-90)" x="' + (-(mT + (H - mT - mB) / 2)) + '" y="16" ' +
+         'text-anchor="middle" font-size="13" fill="currentColor">Probabilidad de ganar el partido</text>';
+
+    // Línea de referencia: un partido a un solo punto (victorias = p)
+    s += '<line x1="' + X(0.40) + '" y1="' + Y(0.40) + '" x2="' + X(0.60) + '" y2="' + Y(0.60) +
+         '" stroke="gray" stroke-dasharray="5"/>';
+
+    // La curva y sus puntos
+    const puntos = curva.map(d => X(d.p) + "," + Y(d.victorias)).join(" ");
+    s += '<polyline points="' + puntos + '" fill="none" stroke="steelblue" stroke-width="2"/>';
+    curva.forEach(d => {
+      s += '<circle cx="' + X(d.p) + '" cy="' + Y(d.victorias) + '" r="3" fill="steelblue"/>';
+    });
+
+    // El punto elegido, en rojo
+    s += '<circle cx="' + X(actual.p) + '" cy="' + Y(actual.victorias) + '" r="8" fill="red"/>';
+
+    el("grafica").innerHTML = s;
+
+    // Marcadores: una barra por cada resultado (azul = gana A, rojo = gana B)
+    const maximo = Math.max(...Object.values(actual.marcadores)) || 1;
+    let barras = "";
+    Object.entries(actual.marcadores).forEach(([marcador, fraccion]) => {
+      const sets = marcador.split("-").map(Number);
+      const color = sets[0] > sets[1] ? "steelblue" : "tomato";
+      barras += '<div style="display:flex; align-items:center; gap:10px; margin:3px 0">' +
+        '<span style="width:40px"><b>' + marcador + '</b></span>' +
+        '<div style="flex:1; max-width:400px">' +
+          '<div style="background:' + color + '; height:16px; width:' + (fraccion / maximo * 100) + '%"></div>' +
+        '</div>' +
+        '<span style="width:60px; text-align:right">' + (fraccion * 100).toFixed(1) + ' %</span>' +
+      '</div>';
+    });
+    el("marcadores").innerHTML = barras;
+  }
+
+  // Cada vez que el usuario toca un control, se vuelve a dibujar
+  ["deporte", "p", "delta"].forEach(id => el(id).addEventListener("input", dibujar));
+  dibujar();
+})();
+</script>
+"""
+
+display(HTML(PLANTILLA.replace("__DATOS__", json.dumps(filas))))
+```
+
+*La línea discontinua gris es la referencia de un partido a un solo punto: ahí la
+probabilidad de ganar sería igual a 'p'.*
