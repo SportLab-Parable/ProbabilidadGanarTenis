@@ -76,6 +76,9 @@ partidos aunque en los puntos normales esté igualado.
   frente a 'p'), para cada deporte.
 - La probabilidad de cada marcador final en sets (3-0, 3-1, 3-2, 2-3, etc.).
 
+
+![](victorias_vs_p.png){width=90% fig-align="center"}
+
 **Cómo está hecho.** Python simula los partidos una sola vez al generar el
 documento y guarda los resultados dentro del HTML. El navegador solo los muestra,
 por lo que el archivo se puede abrir sin instalar nada.
