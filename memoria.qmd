@@ -16,7 +16,9 @@ execute:
 **La pregunta.** Roger Federer ganó el 80 % de sus 1526 partidos,
 pero solo el 54 % de los puntos que jugó. ¿Cómo pudo ganar tantos partidos con ese porcentaje de puntos?
 
-**Método.** Se simulan miles de partidos punto a punto usando números aleatorios entre 0 y 1:
+**Objetivo.** Estudiar cómo varía la probabilidad de ganar un partido cuando cambia la probabilidad de ganar un punto. 
+
+**Método.** Para ello, se simulan miles de partidos de tenis, bádminton y ping-pong; punto a punto usando números aleatorios entre 0 y 1:
 el jugador A gana cada punto con probabilidad 'p' y el jugador B con '1 - p'.
 El porcentaje de partidos que gana A es la estimación de su probabilidad de
 ganar el partido. Se repite para valores de 'p' entre 0.40 y 0.60.
@@ -34,7 +36,7 @@ ganar el partido. Se repite para valores de 'p' entre 0.40 y 0.60.
 **Resultado principal: una ventaja pequeña se amplifica mucho.** En el tenis, el
 modelo da aproximadamente estos resultados:
 
-| Puntos ganados (`p`) | 0.50 | 0.51 | 0.52 | 0.53 | 0.54 | 0.55 | 0.56 |
+| Puntos ganados ('p') | 0.50 | 0.51 | 0.52 | 0.53 | 0.54 | 0.55 | 0.56 |
 |---|---|---|---|---|---|---|---|
 | Partidos ganados | 50 % | 64 % | 75 % | 85 % | 91 % | 95 % | 98 % |
 
@@ -48,7 +50,7 @@ a set.
 el modelo correspondería a 'p ≈ 0.525'). La diferencia es esperable, porque el
 modelo es una simplificación: supone que 'p' es la misma contra cualquier rival y
 que los puntos son independientes entre sí. En la realidad el 54 % es un promedio
-de muchos rivales, y los puntos no pesan lo mismo en todo momento. El modelo muestra maticamente una realidad conocida en el mundo del tenis, pese a su larga carrera plagada de éxitos, Roger Federer era comunmente conocido por jugar peor en puntos importantes y por tanto perder algunos partidos que debería haber ganado. Es el jugador que ostenta el record de más partidos perdidos habiendo ganado más puntos que el adversario. En el modelo avanzado podemos observar que si se ajusta la 'p=54' con una 'desventaja' de -0.05 en puntos de presión, se debrían ganar aproximadamente el 80% de los partidos, ejemplificando así a jugadores como Federer.
+de muchos rivales, y los puntos no pesan lo mismo en todo momento. El modelo muestra matemáticamente una realidad conocida en el mundo del tenis, pese a su larga carrera plagada de éxitos, Roger Federer era comúnmente conocido por jugar peor en puntos importantes y por tanto perder algunos partidos que debería haber ganado. Es el jugador que ostenta el record de más partidos perdidos habiendo ganado más puntos que el adversario. En el modelo avanzado podemos observar que si se ajusta la 'p=54' con una 'desventaja' de -0.05 en puntos de presión, se deberían ganar aproximadamente el 80% de los partidos, ejemplificando así a jugadores como Federer.
 Aun así, el modelo explica la idea
 general: ganar un poco más de la mitad de los puntos basta para ganar la gran
 mayoría de los partidos.
@@ -79,9 +81,7 @@ partidos aunque en los puntos normales esté igualado.
 
 ![](victorias_vs_p.png){width=90% fig-align="center"}
 
-**Cómo está hecho.** Python simula los partidos una sola vez al generar el
-documento y guarda los resultados dentro del HTML. El navegador solo los muestra,
-por lo que el archivo se puede abrir sin instalar nada.
+**Cómo está hecho.** El proyecto se divide en dos partes relacionadas: un archivo con código Python que simula y calcula los resultados de los partidos y un archivo '.qmd' que incorpora JavaScript para presentar esos resultados en una página HTML interactiva. Esta separación permite realizar los cálculos una sola vez al generar el documento y después cambiar los controles de la página sin volver a simular miles de partidos cada vez.
 
 # Simulación
 
@@ -140,6 +140,8 @@ PLANTILLA = """
     <b id="delta_val"></b></label></p>
   <p id="texto" style="font-size:1.1em"></p>
   <svg id="grafica" viewBox="0 0 700 420" style="max-width:700px; width:100%; color:inherit"></svg>
+  <p style="font-size:0.9em"><em>La línea discontinua gris es la referencia de un partido a un solo punto: ahí la
+  probabilidad de ganar sería igual a 'p'.</em></p>
   <h4>Probabilidad de cada marcador final (sets de A - sets de B)</h4>
   <div id="marcadores"></div>
 </div>
@@ -234,5 +236,9 @@ PLANTILLA = """
 display(HTML(PLANTILLA.replace("__DATOS__", json.dumps(filas))))
 ```
 
-*La línea discontinua gris es la referencia de un partido a un solo punto: ahí la
-probabilidad de ganar sería igual a 'p'.*
+# Código
+
+[Enlace al repositorio de Github](https://github.com/SportLab-Parable/ProbabilidadGanarTenis)
+
+
+[LinkedIn](https://www.linkedin.com/company/sportlab-parable)
